@@ -149,6 +149,8 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 $data = ['__pimcore_dummy' => 'only_a_dummy'];
                 $dataIntl = ['__pimcore_dummy' => 'only_a_dummy'];
 
+                $fallbackLocale = $this->getCatalogue($locale)->getFallbackCatalogue()?->getLocale();
+
                 $list = new Translation\Listing();
                 $list->setDomain($domain);
 
@@ -158,6 +160,22 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
 
                 foreach ($translations as $translation) {
                     $translationTerm = Tool\Text::removeLineBreaks($translation['text']);
+
+                    //if the translation is empty for the current language, check for its fallback language
+                    if (!isset($data[$translation['key']]) && $fallbackLocale && empty($translationTerm)){
+                        $fallbackTranslationTerm = Translation::getByKey(
+                            $translation['key'],
+                            $domain,
+                            false,
+                            false,
+                            [$fallbackLocale]
+                        )?->getTranslations()[$fallbackLocale];
+
+                        if ($fallbackTranslationTerm) {
+                            $data[$translation['key']] = $fallbackTranslationTerm;
+                        }
+                    }
+
                     if (
                         (!isset($data[$translation['key']]) && !$this->getCatalogue($locale)->has($translation['key'], $domain)) ||
                         !empty($translationTerm)) {
@@ -183,7 +201,7 @@ class Translator implements TranslatorInterface, TranslatorBagInterface, LocaleA
                 $catalogue = new MessageCatalogue($locale, $data);
 
                 Cache::save($catalogue, $cacheKey, ['translator', 'translator_website', 'translate'], null, 999);
-            }
+           }
 
             if ($catalogue) {
                 $this->getCatalogue($locale)->addCatalogue($catalogue);
