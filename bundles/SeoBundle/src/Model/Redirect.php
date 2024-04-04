@@ -139,6 +139,16 @@ final class Redirect extends AbstractModel
         return $this->target;
     }
 
+    public function getTargetPath(): string
+    {
+        $resolvedPath = (Pimcore\Model\Document::getById($this->target)?->getFullPath() ?? $this->target) ?? "";
+
+        if(!str_starts_with($resolvedPath, "/")) {
+            return "/".$resolvedPath;
+        }
+        return $resolvedPath;
+    }
+
     public function setId(int $id): static
     {
         $this->id = $id;
