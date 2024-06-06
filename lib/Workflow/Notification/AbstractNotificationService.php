@@ -46,7 +46,7 @@ class AbstractNotificationService
      *
      * @return User[][]
      */
-    protected function getNotificationUsersByName(array $users, array $roles, bool $includeAllUsers = false): array
+    protected function getNotificationUsersByName(array $users, array $roles, bool $includeAllUsers = true): array
     {
         $notifyUsers = [];
 
@@ -57,12 +57,9 @@ class AbstractNotificationService
 
             foreach ($roleList->load() as $role) {
                 $userList = new User\Listing();
-                $userList->setCondition('FIND_IN_SET(?, roles) > 0', [$role->getId()]);
-
+                $userList->setCondition('FIND_IN_SET(?, roles) > 0 and email is not null AND active = ?', [$role->getId(), $includeAllUsers]);
                 foreach ($userList->load() as $user) {
-                    if ($includeAllUsers || $user->getEmail()) {
-                        $notifyUsers[$user->getLanguage()][$user->getId()] = $user;
-                    }
+                    $notifyUsers[$user->getLanguage()][$user->getId()] = $user;
                 }
             }
         }
@@ -70,18 +67,12 @@ class AbstractNotificationService
         if ($users) {
             //get users
             $userList = new User\Listing();
-            if ($includeAllUsers) {
-                $userList->setCondition('name IN ('.implode(',', array_map([Db::get(), 'quote'], $users)).')');
-            } else {
-                $userList->setCondition(
-                    'name IN ('.implode(',', array_map([Db::get(), 'quote'], $users)).') and email is not null'
-                );
-            }
+            $userList->setCondition(
+                'name IN ('.implode(',', array_map([Db::get(), 'quote'], $users)).') and email is not null AND active = ?', [$includeAllUsers]
+            );
 
             foreach ($userList->load() as $user) {
-                if ($includeAllUsers || $user->getEmail()) {
-                    $notifyUsers[$user->getLanguage()][$user->getId()] = $user;
-                }
+                $notifyUsers[$user->getLanguage()][$user->getId()] = $user;
             }
         }
 
