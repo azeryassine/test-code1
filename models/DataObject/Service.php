@@ -433,7 +433,12 @@ class Service extends Model\Element\Service
                                     }
                                 }
                             } else {
-                                $data[$dataKey] = $valueObject->value;
+                                $inheritanceBackup = AbstractObject::getGetInheritedValues();
+                                AbstractObject::setGetInheritedValues(true);
+
+                                $data[$dataKey] = $object->get($key, $user?->getLanguage());
+
+                                AbstractObject::setGetInheritedValues($inheritanceBackup);
                             }
                         }
                     }
