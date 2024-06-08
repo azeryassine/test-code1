@@ -327,7 +327,7 @@ class Dao extends Model\Element\Dao
      * @param Model\User|null $user
      *
      */
-    public function hasChildren(User $user = null): bool
+    public function hasChildren(?User $user = null): bool
     {
         if (!$this->model->getId()) {
             return false;
@@ -386,7 +386,7 @@ class Dao extends Model\Element\Dao
      * @param Model\User|null $user
      *
      */
-    public function getChildAmount(User $user = null): int
+    public function getChildAmount(?User $user = null): int
     {
         if (!$this->model->getId()) {
             return 0;
