@@ -17,6 +17,8 @@ declare(strict_types=1);
 namespace Pimcore\Model\Listing\Dao;
 
 use Doctrine\DBAL\Query\QueryBuilder;
+use Doctrine\DBAL\Query\QueryException;
+use Pimcore\Db;
 use Pimcore\Model\DataObject;
 
 trait QueryBuilderHelperTrait
@@ -128,7 +130,25 @@ trait QueryBuilderHelperTrait
 
     protected function prepareQueryBuilderForTotalCount(QueryBuilder $queryBuilder, string $identifierColumn): void
     {
-        $originalSelect = $queryBuilder->getQueryPart('select');
+        $distinct = false;
+        $originalSelect = '';
+
+        try {
+            $originalQuery = (string)$queryBuilder;
+            $hasSelect = preg_match('/SELECT(.*?)FROM/', $originalQuery, $matches);
+            if ($hasSelect){
+                $originalSelect = trim($matches[1]);
+                if (strpos($originalSelect, 'DISTINCT')){
+                    $distinct = true;
+                }
+            }
+        }catch(\Exception){
+            //do nothing, this is to avoid `No SELECT expressions given.` exception in dbal v4
+            $originalSelect = '';
+            $queryBuilder->select('1');
+            $originalQuery = (string)$queryBuilder;
+        }
+
         $queryBuilder->select('COUNT(*)');
         $queryBuilder->resetOrderBy();
         $queryBuilder->setMaxResults(null);
@@ -138,32 +158,75 @@ trait QueryBuilderHelperTrait
             $queryBuilder->distinct();
         }
 
-        if ($this->isQueryBuilderPartInUse($queryBuilder, 'groupBy') || $this->isQueryBuilderPartInUse($queryBuilder, 'having')) {
-            $queryBuilder->select(!empty($originalSelect) ? $originalSelect : $identifierColumn);
+        $hasGroupByClauses = preg_match('/\b(GROUP BY|HAVING)\b/', $originalQuery, $matches);
+        if ($hasGroupByClauses) {
+            $queryBuilder->select($originalSelect ?: $identifierColumn);
 
             // Rewrite to 'SELECT COUNT(*) FROM (' . $queryBuilder . ') XYZ'
             $innerQuery = (string)$queryBuilder;
+            $countQueryBuilder = Db::get()->createQueryBuilder();
             $queryBuilder
-                ->resetQueryParts()
+                ->resetWhere()
+                ->resetGroupBy()
+                ->resetHaving()
+                ->resetOrderBy()
                 ->select('COUNT(*)')
                 ->from('(' . $innerQuery . ')', 'XYZ')
             ;
-        } elseif ($this->isQueryBuilderPartInUse($queryBuilder, 'distinct')) {
+        } elseif ($distinct) {
             $countIdentifier = 'DISTINCT ' . $identifierColumn;
             $queryBuilder->select('COUNT(' . $countIdentifier . ') AS totalCount');
         }
     }
+    protected function getTotalCountFromQueryBuilder(QueryBuilder $queryBuilder, string $identifierColumn): int
+    {
+        $distinct = false;
+        $originalSelect = '';
+
+        try {
+            $originalQuery = (string)$queryBuilder;
+            $hasSelect = preg_match('/SELECT(.*?)FROM/', $originalQuery, $matches);
+            if ($hasSelect){
+                $originalSelect = trim($matches[1]);
+                if (strpos($originalSelect, 'DISTINCT')){
+                    $distinct = true;
+                }
+            }
+        }catch(\Exception){
+            //do nothing, this is to avoid `No SELECT expressions given.` exception in dbal v4
+            $originalSelect = '';
+            $queryBuilder->select('1');
+            $originalQuery = (string)$queryBuilder;
+        }
+
+        $queryBuilder->select('COUNT(*)');
+        $queryBuilder->resetOrderBy();
+        $queryBuilder->setMaxResults(null);
+        $queryBuilder->setFirstResult(0);
+
+        if (method_exists($this->model, 'addDistinct') && $this->model->addDistinct()) {
+            $queryBuilder->distinct();
+        }
+
+        $hasGroupByClauses = preg_match('/\b(GROUP BY|HAVING)\b/', $originalQuery, $matches);
+        if ($hasGroupByClauses) {
+            $queryBuilder->select($originalSelect ?: $identifierColumn);
+
+            $innerQuery = (string)$queryBuilder;
+            $query = 'SELECT COUNT(*) FROM (' . $innerQuery . ') AS XYZ';
+        } elseif ($distinct) {
+            $countIdentifier = 'DISTINCT ' . $identifierColumn;
+            $queryBuilder->select('COUNT(' . $countIdentifier . ') AS totalCount');
+            $query = (string)$queryBuilder;
+        } else{
+            $query = (string)$queryBuilder;
+        }
+
+        return (int) $this->db->fetchOne($query, $queryBuilder->getParameters(), $queryBuilder->getParameterTypes());
+    }
 
     protected function isQueryBuilderPartInUse(QueryBuilder $query, string $part): bool
     {
-        try {
-            if ($query->getQueryPart($part)) {
-                return true;
-            }
-        } catch (\Exception $e) {
-            // do nothing
-        }
-
-        return false;
+        return true;
     }
 }

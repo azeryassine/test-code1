@@ -56,7 +56,8 @@ class MaintenanceModeHelper implements MaintenanceModeHelperInterface
     {
         try {
             if (!$this->db->isConnected()) {
-                $this->db->connect();
+                // doesn't do anything, just to trigger a (protected since dbal v4) `->connect()` call
+                $this->db->getNativeConnection();
             }
         } catch (\Exception) {
             return false;
