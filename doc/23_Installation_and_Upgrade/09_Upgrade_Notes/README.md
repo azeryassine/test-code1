@@ -54,8 +54,10 @@
   To replace Headless Chrome, upgrade to Gotenberg v8 and upgrade the client library: `composer require gotenberg/gotenberg-php:^2`
 #### [Data Objects]:
 - Methods `getAsIntegerCast()` and `getAsFloatCast()` of the `Pimcore\Model\DataObject\Data` class are deprecated now.
+- Method `Service::getHelperDefinitions()` is deprecated here and moved to `admin-classic-ui-bundle` `v1.5`.
 - All algorithms other than`password_hash` used in Password Data Type are now deprecated, please use `password_hash` instead.
 - `MultiSelectOptionsProviderInterface` is deprecated, please use `SelectOptionsProviderInterface` instead.
+
 -----------------
 ### General
 #### [Localization]
