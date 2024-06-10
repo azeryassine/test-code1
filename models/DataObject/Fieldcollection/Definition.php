@@ -38,11 +38,11 @@ class Definition extends Model\AbstractModel
     use Model\DataObject\ClassDefinition\Helper\VarExport;
 
     /**
-     * @var array
+     * @var string[]
      */
     protected const FORBIDDEN_NAMES = [
-        'abstract', 'class', 'data', 'folder', 'list', 'permissions', 'resource', 'dao', 'concrete', 'items',
-        'object', 'interface', 'default',
+        'abstract', 'class', 'concrete', 'dao', 'data', 'default', 'folder', 'interface', 'items', 'list', 'object',
+        'permissions', 'resource',
     ];
 
     protected function doEnrichFieldDefinition(Data $fieldDefinition, array $context = []): Data
@@ -58,7 +58,6 @@ class Definition extends Model\AbstractModel
 
     /**
      * @internal
-     *
      */
     protected function extractDataDefinitions(DataObject\ClassDefinition\Data|DataObject\ClassDefinition\Layout $def): void
     {
@@ -84,8 +83,6 @@ class Definition extends Model\AbstractModel
     }
 
     /**
-     *
-     *
      * @throws \Exception
      */
     public static function getByKey(string $key): ?Definition
@@ -118,7 +115,6 @@ class Definition extends Model\AbstractModel
     }
 
     /**
-     *
      * @throws \Exception
      */
     public function save(bool $saveDefinitionFile = true): void
@@ -166,7 +162,6 @@ class Definition extends Model\AbstractModel
     }
 
     /**
-     *
      * @throws \Exception
      * @throws DataObject\Exception\DefinitionWriteException
      *
@@ -240,8 +235,6 @@ class Definition extends Model\AbstractModel
     }
 
     /**
-     *
-     *
      * @internal
      */
     public function getDefinitionFile(string $key = null): string
@@ -251,7 +244,6 @@ class Definition extends Model\AbstractModel
 
     /**
      * @internal
-     *
      */
     public function getPhpClassFile(): string
     {
@@ -260,7 +252,6 @@ class Definition extends Model\AbstractModel
 
     /**
      * @internal
-     *
      */
     protected function getInfoDocBlock(): string
     {
@@ -279,6 +270,11 @@ class Definition extends Model\AbstractModel
 
     public function isForbiddenName(): bool
     {
-        return in_array($this->getKey(), self::FORBIDDEN_NAMES);
+        $key = $this->getKey();
+        if ($key === null || $key === '') {
+            return true;
+        }
+
+        return in_array(strtolower($key), self::FORBIDDEN_NAMES);
     }
 }
